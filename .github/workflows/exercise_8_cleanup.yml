@@ -1,0 +1,203 @@
+name: 8 CleanUp
+on:
+  workflow_dispatch:
+
+env:
+ # verbosity setting for Terraform logs
+ TF_LOG: WARN
+ # S3 bucket for the Terraform state
+ BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE}}
+ OWNER: ${{ vars.OWNER }}
+ FIXED_IMAGE_TAG: ${{ vars.FIXED_IMAGE_TAG }}
+ ROLE_PREFIX: ${{ secrets.ROLE_PREFIX }}
+ REPOSITORY_OWNER: ${{ github.repository_owner }}
+ REPOSITORY_NAME: ${{ github.event.repository.name }}
+
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  terraform-full-cleanup:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout the repository to the runner
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5.0.0
+        with:
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ vars.AWS_REGION }}
+
+# These following need to run in sequence to ensure no conflicts when cleaning up
+# app runner
+      - name: Set up variables app runner
+        working-directory: ./exercises/8-troubleshooting-2/simpler/apprunner
+        id: simple-app-run-config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"eight\"" >> vars.auto.tfvars
+         echo "app_name = \"eight\"" >> vars.auto.tfvars
+         echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
+         echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+         echo "role_prefix = \"$ROLE_PREFIX\"" >> vars.auto.tfvars
+
+      - name: Terraform init app runner
+        working-directory: ./exercises/8-troubleshooting-2/simpler/apprunner
+        id: simple-app-run-init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate app runner
+        working-directory: ./exercises/8-troubleshooting-2/simpler/apprunner
+        id: simple-app-run-validate
+        run: terraform validate
+
+      - name: Terraform plan destroy app runner
+        id: simple-app-run-plan
+        working-directory: ./exercises/8-troubleshooting-2/simpler/apprunner
+        run: terraform plan -destroy -no-color -input=false
+
+      - name: Terraform destroy app runner
+        id: simple-app-run-destroy
+        working-directory: ./exercises/8-troubleshooting-2/simpler/apprunner
+        run: terraform apply -destroy -auto-approve -input=false
+
+      - name: Set up variables app runner
+        working-directory: ./exercises/8-troubleshooting-2/stretch/apprunner
+        id: stretch-app-run-config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"eight\"" >> vars.auto.tfvars
+         echo "app_name = \"eight\"" >> vars.auto.tfvars
+         echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
+         echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+         echo "role_prefix = \"$ROLE_PREFIX\"" >> vars.auto.tfvars
+
+      - name: Terraform init app runner
+        working-directory: ./exercises/8-troubleshooting-2/stretch/apprunner
+        id: stretch-app-run-init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate app runner
+        working-directory: ./exercises/8-troubleshooting-2/stretch/apprunner
+        id: stretch-app-run-validate
+        run: terraform validate
+
+      - name: Terraform plan destroy app runner
+        id: stretch-app-run-plan
+        working-directory: ./exercises/8-troubleshooting-2/stretch/apprunner
+        run: terraform plan -destroy -no-color -input=false
+
+      - name: Terraform destroy app runner
+        id: stretch-app-run-destroy
+        working-directory: ./exercises/8-troubleshooting-2/stretch/apprunner
+        run: terraform apply -destroy -auto-approve -input=false
+
+# image deploy
+
+      - name: Set up variables image deploy
+        working-directory: ./exercises/8-troubleshooting-2/simpler/deploy
+        id: simple-image-config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"eight\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+
+      - name: Terraform init image deploy
+        working-directory: ./exercises/8-troubleshooting-2/simpler/deploy
+        id: simple-image-init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate image deploy
+        working-directory: ./exercises/8-troubleshooting-2/simpler/deploy
+        id: simple-image-validate
+        run: terraform validate
+
+      - name: Terraform plan destroy image deploy
+        id: simple-image-plan
+        working-directory: ./exercises/8-troubleshooting-2/simpler/deploy
+        run: terraform plan -destroy -no-color -input=false
+
+      - name: Terraform destroy image deploy
+        id: simple-image-destroy
+        working-directory: ./exercises/8-troubleshooting-2/simpler/deploy
+        run: terraform apply -destroy -auto-approve -input=false
+
+      - name: Set up variables image deploy
+        working-directory: ./exercises/8-troubleshooting-2/stretch/deploy
+        id: stretch-image-config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"eight\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+
+      - name: Terraform init image deploy
+        working-directory: ./exercises/8-troubleshooting-2/stretch/deploy
+        id: stretch-image-init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate image deploy
+        working-directory: ./exercises/8-troubleshooting-2/stretch/deploy
+        id: stretch-image-validate
+        run: terraform validate
+
+      - name: Terraform plan destroy image deploy
+        id: stretch-image-plan
+        working-directory: ./exercises/8-troubleshooting-2/stretch/deploy
+        run: terraform plan -destroy -no-color -input=false
+
+      - name: Terraform destroy image deploy
+        id: stretch-image-destroy
+        working-directory: ./exercises/8-troubleshooting-2/stretch/deploy
+        run: terraform apply -destroy -auto-approve -input=false
+
+# infrastructure as code 
+      - name: Set up variables iac
+        working-directory: ./exercises/8-troubleshooting-2/iac
+        id: iac-config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"eight\"" >> vars.auto.tfvars
+         echo "app_name = \"eight\"" >> vars.auto.tfvars
+         echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
+         echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+
+      - name: Terraform init iac
+        working-directory: ./exercises/8-troubleshooting-2/iac
+        id: iac-init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate iac
+        working-directory: ./exercises/8-troubleshooting-2/iac
+        id: iac-validate
+        run: terraform validate
+
+      - name: Terraform plan destroy iac
+        id: iac-plan
+        working-directory: ./exercises/8-troubleshooting-2/iac
+        run: terraform plan -destroy -no-color -input=false
+
+      - name: Terraform destroy iac
+        id: iac-destroy
+        working-directory: ./exercises/8-troubleshooting-2/iac
+        run: terraform apply -destroy -auto-approve -input=false
