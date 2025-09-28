@@ -1,0 +1,70 @@
+name: 6 App Runner
+on:
+  workflow_dispatch:
+
+env:
+ # verbosity setting for Terraform logs
+ TF_LOG: WARN
+ # S3 bucket for the Terraform state
+ BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE}}
+ OWNER: ${{ vars.OWNER }}
+ FIXED_IMAGE_TAG: ${{ vars.FIXED_IMAGE_TAG }}
+ ROLE_PREFIX: ${{ secrets.ROLE_PREFIX }}
+ REPOSITORY_OWNER: ${{ github.repository_owner }}
+ REPOSITORY_NAME: ${{ github.event.repository.name }}
+
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  terraform-apprunner-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./exercises/6-first-app-deploy-pipeline/apprunner
+        shell: bash
+
+    steps:
+      - name: Checkout the repository to the runner
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: Set up variables # needs to be set up correctly
+        id: config
+        run: |
+         touch vars.auto.tfvars
+         echo "owner = \"$OWNER\"" >> vars.auto.tfvars
+         echo "ecr_repository = \"hello\"" >> vars.auto.tfvars
+         echo "app_name = \"hello\"" >> vars.auto.tfvars
+         echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
+         echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
+         echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+         echo "role_prefix = \"$ROLE_PREFIX\"" >> vars.auto.tfvars
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5.0.0
+        with:
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Terraform init
+        id: init
+        run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+
+      - name: Terraform plan
+        id: plan
+        run: terraform plan -no-color -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
