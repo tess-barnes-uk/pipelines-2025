@@ -11,6 +11,7 @@ env:
  FIXED_IMAGE_TAG: ${{ vars.FIXED_IMAGE_TAG }}
  REPOSITORY_OWNER: ${{ github.repository_owner }}
  REPOSITORY_NAME: ${{ github.event.repository.name }}
+ CIDR_BASE: ${{ vars.EX8_CIDR_BASE }}
 
 
 permissions:
@@ -44,6 +45,7 @@ jobs:
          echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
          echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
          echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+         echo "cidr_base = \"$CIDR_BASE\"" >> vars.auto.tfvars
 
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v5.0.0

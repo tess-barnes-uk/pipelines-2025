@@ -3,7 +3,7 @@ data "aws_availability_zones" "available" {}
 locals {
   name = "${var.owner}-${var.app_name}"
 
-  vpc_cidr = "10.0.0.0/16"
+  vpc_cidr = "${var.cidr_base}/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
@@ -20,6 +20,12 @@ module "vpc" {
   azs             = local.azs
   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
+  public_subnet_tags = {
+    Tier = "Public"
+  }
+  private_subnet_tags = {
+    Tier = "Private"
+  }
 
   enable_nat_gateway = false
 
