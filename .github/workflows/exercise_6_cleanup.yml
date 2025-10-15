@@ -12,7 +12,7 @@ env:
  ROLE_PREFIX: ${{ secrets.ROLE_PREFIX }}
  REPOSITORY_OWNER: ${{ github.repository_owner }}
  REPOSITORY_NAME: ${{ github.event.repository.name }}
-
+ CIDR_BASE: ${{ vars.EX6_CIDR_BASE }}
 
 permissions:
   id-token: write
@@ -119,6 +119,7 @@ jobs:
          echo "org_name = \"$REPOSITORY_OWNER\"" >> vars.auto.tfvars
          echo "repo_name = \"$REPOSITORY_NAME\"" >> vars.auto.tfvars
          echo "fixed_image_tag = \"$FIXED_IMAGE_TAG\"" >> vars.auto.tfvars
+         echo "cidr_base = \"$CIDR_BASE\"" >> vars.auto.tfvars
 
       - name: Terraform init iac
         working-directory: ./exercises/6-first-app-deploy-pipeline/iac

@@ -19,6 +19,11 @@ variable "app_name" {
   description = "A short name for your app, it will be combined with owner to make it unique. There is no default"
 }
 
+variable "cidr_base" {
+  type = string
+  description = "The starting ip of a ip4 cidr block, this should be unique for the account and not overlap with any other e.g. 172.16.0.0, 172.18.0.0, 172.20.0.0"
+}
+
 variable "ecr_repository" {
   type        = string
   description = "A short name for your image, it will be combined with owner to make it unique. There is no default"
