@@ -1,5 +1,8 @@
 # Tips for node related things
 
+## managing multiple versions of node
+- node versions can change between projects and during a project, there are tools like [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) and [fnm](https://github.com/Schniz/fnm) (as well as [others](https://betterstack.com/community/guides/scaling-nodejs/nvm-alternatives-guide/)) to help you mange this easily and avoid getting your dependencies in a muddle. 
+
 ## config
 - what on earth is an [.nvmrc](https://thawinwats.medium.com/change-project-change-node-version-let-nvmrc-help-you-630b34dafd09) file for?
 
